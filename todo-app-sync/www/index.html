@@ -1,13 +1,394 @@
-@"
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="refresh" content="0; url=www/index.html" />
-  <title>To-Do List</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>To-Do List (Synced)</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: #f0f1f5;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* --- Header --- */
+    header {
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      padding: 22px 18px 18px;
+      font-size: 20px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 14px rgba(79, 70, 229, 0.25);
+      position: relative;
+      z-index: 2;
+    }
+    #codeLabel {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.85;
+    }
+    #changeListBtn {
+      background: rgba(255,255,255,0.18);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.35);
+      border-radius: 20px;
+      padding: 7px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      flex-shrink: 0;
+      transition: background 0.15s ease, transform 0.1s ease;
+    }
+    #changeListBtn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
+
+    /* --- Input row --- */
+    #inputRow {
+      display: flex;
+      padding: 16px;
+      gap: 10px;
+      background: #f0f1f5;
+    }
+    #taskInput {
+      flex: 1;
+      padding: 14px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      outline: none;
+      transition: box-shadow 0.15s ease;
+    }
+    #taskInput:focus {
+      box-shadow: 0 2px 10px rgba(99, 102, 241, 0.25), 0 0 0 2px #6366f1;
+    }
+    #addBtn {
+      padding: 0 20px;
+      font-size: 22px;
+      font-weight: 600;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 3px 10px rgba(99, 102, 241, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+    }
+    #addBtn:active { transform: scale(0.93); box-shadow: 0 1px 4px rgba(99, 102, 241, 0.3); }
+
+    /* --- List --- */
+    #list {
+      list-style: none;
+      margin: 0;
+      padding: 4px 16px 16px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    #list li {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 16px;
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      font-size: 16px;
+      animation: slideIn 0.25s ease;
+      transition: opacity 0.2s ease, transform 0.2s ease, box-shadow 0.15s ease;
+    }
+    #list li:active { transform: scale(0.99); }
+    #list li.done {
+      background: #f6f7fb;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.03);
+    }
+    #list li.done span { text-decoration: line-through; color: #a8abb8; }
+    #list li span { flex: 1; word-break: break-word; color: #2c2e3a; transition: color 0.2s ease; }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .checkbox {
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 2px solid #6366f1;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    }
+    .checkbox:active { transform: scale(0.85); }
+    .checkbox::after {
+      content: '';
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: white;
+      opacity: 0;
+      transform: scale(0.5);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+    #list li.done .checkbox {
+      background: #6366f1;
+      border-color: #6366f1;
+    }
+    #list li.done .checkbox::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .deleteBtn {
+      color: #d1d3dc;
+      font-size: 18px;
+      padding: 4px 6px;
+      flex-shrink: 0;
+      transition: color 0.15s ease, transform 0.1s ease;
+    }
+    .deleteBtn:active { transform: scale(0.85); color: #ef4444; }
+
+    #emptyMsg {
+      text-align: center;
+      color: #a8abb8;
+      margin-top: 60px;
+      font-size: 15px;
+    }
+
+    /* --- List code entry screen --- */
+    #codeScreen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+      gap: 16px;
+      background: linear-gradient(180deg, #eef0fb, #f0f1f5 40%);
+    }
+    #codeScreen h2 {
+      font-size: 24px;
+      color: #2c2e3a;
+      margin: 0;
+    }
+    #codeScreen p {
+      color: #7c7f8e;
+      max-width: 300px;
+      line-height: 1.5;
+      font-size: 14px;
+      margin: 0;
+    }
+    #codeInput {
+      padding: 16px;
+      font-size: 20px;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 3px;
+      border: none;
+      border-radius: 14px;
+      background: white;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+      width: 220px;
+      outline: none;
+      color: #2c2e3a;
+      transition: box-shadow 0.15s ease;
+    }
+    #codeInput:focus {
+      box-shadow: 0 3px 14px rgba(99, 102, 241, 0.3), 0 0 0 2px #6366f1;
+    }
+    #joinBtn {
+      padding: 14px 32px;
+      font-size: 16px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: white;
+      border: none;
+      border-radius: 14px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+      transition: transform 0.1s ease;
+    }
+    #joinBtn:active { transform: scale(0.95); }
+
+    .hidden { display: none !important; }
+
+    #syncStatus {
+      font-size: 12px;
+      color: #a8abb8;
+      text-align: center;
+      padding: 8px;
+      transition: color 0.2s ease;
+    }
+  </style>
 </head>
 <body>
-  <p>Redirecting... if nothing happens, <a href="www/index.html">click here</a>.</p>
+
+  <!-- Screen 1: enter or create a list code -->
+  <div id="codeScreen">
+    <h2>My To-Do List</h2>
+    <p>Enter a List Code. Use the <b>same code on every device</b> you want to share this list with.</p>
+    <input id="codeInput" type="text" placeholder="e.g. FAMILY1" maxlength="12" />
+    <button id="joinBtn">Open List</button>
+  </div>
+
+  <!-- Screen 2: the actual list (hidden until a code is entered) -->
+  <div id="appScreen" class="hidden" style="display:none; flex-direction:column; height:100%;">
+    <header>
+      <span>My To-Do List</span>
+      <span id="codeLabel"></span>
+      <button id="changeListBtn">Change List</button>
+    </header>
+    <div id="inputRow">
+      <input id="taskInput" type="text" placeholder="Add a task..." />
+      <button id="addBtn">+</button>
+    </div>
+    <ul id="list"></ul>
+    <div id="emptyMsg">No tasks yet — add one above.</div>
+    <div id="syncStatus">Synced</div>
+  </div>
+
+  <!-- Firebase SDKs (compat version — simplest syntax) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAHG-WweiGHBTUabxafNVqlmCmaRx3Pbns",
+      authDomain: "my-to-do-app-c7827.firebaseapp.com",
+      projectId: "my-to-do-app-c7827",
+      storageBucket: "my-to-do-app-c7827.firebasestorage.app",
+      messagingSenderId: "440271714346",
+      appId: "1:440271714346:web:00ad919719db4386d3ab53"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // --- Elements ---
+    const codeScreen = document.getElementById('codeScreen');
+    const appScreen = document.getElementById('appScreen');
+    const codeInput = document.getElementById('codeInput');
+    const joinBtn = document.getElementById('joinBtn');
+    const codeLabel = document.getElementById('codeLabel');
+    const changeListBtn = document.getElementById('changeListBtn');
+    const listEl = document.getElementById('list');
+    const inputEl = document.getElementById('taskInput');
+    const addBtn = document.getElementById('addBtn');
+    const emptyMsg = document.getElementById('emptyMsg');
+    const syncStatus = document.getElementById('syncStatus');
+
+    let tasks = [];
+    let listRef = null;
+    let unsubscribe = null; // stops the previous list's live listener when switching lists
+
+    // Remember the last code used on this device so you don't retype it every time
+    const savedCode = localStorage.getItem('todo-list-code');
+    if (savedCode) {
+      codeInput.value = savedCode;
+      openList(savedCode);
+    }
+
+    joinBtn.addEventListener('click', () => {
+      const code = codeInput.value.trim().toUpperCase();
+      if (!code) return;
+      localStorage.setItem('todo-list-code', code);
+      openList(code);
+    });
+
+    function openList(code) {
+      listRef = db.collection('todo-lists').doc(code);
+      codeLabel.textContent = 'List: ' + code;
+
+      codeScreen.style.display = 'none';
+      appScreen.classList.remove('hidden');
+      appScreen.style.display = 'flex';
+
+      // Real-time listener: fires immediately with current data,
+      // then again automatically whenever ANY device changes this list.
+      unsubscribe = listRef.onSnapshot((doc) => {
+        syncStatus.textContent = 'Synced';
+        tasks = (doc.exists && doc.data().tasks) ? doc.data().tasks : [];
+        render();
+      }, (error) => {
+        syncStatus.textContent = 'Offline — changes will sync when reconnected';
+      });
+    }
+
+    function changeList() {
+      if (unsubscribe) {
+        unsubscribe();
+        unsubscribe = null;
+      }
+      localStorage.removeItem('todo-list-code');
+      listRef = null;
+      tasks = [];
+      codeInput.value = '';
+
+      appScreen.classList.add('hidden');
+      appScreen.style.display = 'none';
+      codeScreen.style.display = 'flex';
+    }
+
+    changeListBtn.addEventListener('click', changeList);
+
+    function saveTasks() {
+      syncStatus.textContent = 'Syncing…';
+      listRef.set({ tasks: tasks });
+    }
+
+    function render() {
+      listEl.innerHTML = '';
+      emptyMsg.style.display = tasks.length === 0 ? 'block' : 'none';
+
+      tasks.forEach((task, index) => {
+        const li = document.createElement('li');
+        if (task.done) li.classList.add('done');
+
+        const checkbox = document.createElement('div');
+        checkbox.className = 'checkbox';
+        checkbox.onclick = () => {
+          tasks[index].done = !tasks[index].done;
+          saveTasks();
+        };
+
+        const span = document.createElement('span');
+        span.textContent = task.text;
+
+        const deleteBtn = document.createElement('div');
+        deleteBtn.className = 'deleteBtn';
+        deleteBtn.textContent = '✕';
+        deleteBtn.onclick = () => {
+          tasks.splice(index, 1);
+          saveTasks();
+        };
+
+        li.appendChild(checkbox);
+        li.appendChild(span);
+        li.appendChild(deleteBtn);
+        listEl.appendChild(li);
+      });
+    }
+
+    function addTask() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+      tasks.push({ text, done: false });
+      inputEl.value = '';
+      saveTasks();
+    }
+
+    addBtn.addEventListener('click', addTask);
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addTask();
+    });
+  </script>
 </body>
 </html>
-"@ | Set-Content -Path index.html -Encoding UTF8
