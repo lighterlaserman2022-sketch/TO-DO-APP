@@ -1,0 +1,6 @@
+{
+  "appId": "com.yourname.todoapp",
+  "appName": "To-Do List",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}
