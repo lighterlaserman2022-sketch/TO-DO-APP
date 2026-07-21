@@ -1,0 +1,48 @@
+name: Build Android APK
+
+# Runs automatically every time you push to the "main" branch,
+# and can also be triggered manually from the Actions tab.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Set up Java (required by the Android build tools)
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up the Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install project dependencies
+        run: npm install
+
+      - name: Add the Android platform (generates the android/ folder)
+        run: npx cap add android
+
+      - name: Sync web files into the Android project
+        run: npx cap sync android
+
+      - name: Build the debug APK
+        run: cd android && chmod +x gradlew && ./gradlew assembleDebug
+
+      - name: Upload the APK so you can download it
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
